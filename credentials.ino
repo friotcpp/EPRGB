@@ -17,6 +17,7 @@ void loadCredentials() {
 
 /** Store WLAN credentials to EEPROM */
 void saveCredentials() {
+  Serial.println(F("Saving credentials"));
   EEPROM.begin(512);
   EEPROM.put(0, ssid);
   EEPROM.put(0 + sizeof(ssid), password);

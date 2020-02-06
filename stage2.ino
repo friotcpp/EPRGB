@@ -1,24 +1,27 @@
  void stage2(){
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  // if DNSServer is started with "*" for domain name, it will reply with
-  // provided IP to all DNS request
-  
-  /* Setup web pages: root, wifi config pages, SO captive portal detectors and not found. */
-  //server.on("/", handleRoot);
-//  epserver.on("/", handleWifi);
-//  epserver.on("/wifi", handleWifi);
-//  epserver.on("/wifisave", handleWifiSave);
-//  server.on("/generate_204", handleRoot);  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
-//  server.on("/fwlink", handleRoot);  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
-//new
-  epserver.on("/getip", HTTP_GET, handleGetIP);
-  epserver.on("/receive", HTTP_POST, handleCommand);
-//
-//  epserver.onNotFound(handleNotFound);
-  
-  epserver.begin(); // Web server start
-  Serial.println("HTTP server started");
-  //loadCredentials(); // Load WLAN credentials from network
-  connect = strlen(ssid) > 0; // Request WLAN connect if there is a SSID
-  dnsServer.start(DNS_PORT, "*", WiFi.localIP());
+   Serial.println("stage 2 commencing/n ep ip on router:"+WiFi.localIP().toString());
+     String sender ="http://192.168."+ mainIP +"/epip";
+   Serial.println("sending Post request to: \n"+ sender);
+  HTTPClient http;  //Declare an object of class HTTPClient
+String epIp= WiFi.localIP().toString();
+epIp.remove(0,8);
+epIp = "epIP="+epIp;
+http.begin(sender);  //Specify request destination
+ http.addHeader("Content-Type", "application/x-www-form-urlencoded");    //Specify content-type header
+ 
+  int httpCode = http.POST(epIp);   //Send the request
+  String payload = http.getString();    //Get the response payload                                                             //Send the request
+  Serial.println("http return code:"+httpCode);
+if (httpCode > 0) { //Check the returning code
+ 
+String payload = http.getString();   //Get the request response payload
+Serial.println(payload);                     //Print the response payload
+
+
+ 
+} else {Serial.println("no payload");}
+ 
+http.end();   //Close connection
+
+stage2go=false;
   }

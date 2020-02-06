@@ -16,26 +16,30 @@ const size_t capacity = JSON_OBJECT_SIZE(3) + JSON_ARRAY_SIZE(2) + 60;
     auto error = deserializeJson(jsonBuff, payload);
     if (error) {
       Serial.println(F("Parsing failed!"));
-      setupGO =false;
+      //setupGO =false;
       return;
     }
     // Decode JSON/Extract values
-    Serial.println(F("Response:"));
+    Serial.println("Response:");
     Serial.println(jsonBuff["SSID"].as<char*>());
     Serial.println(jsonBuff["PASS"].as<char*>());
+    Serial.println(jsonBuff["MIP"].as<char*>());
     Serial.println(jsonBuff["KEY"].as<int>());
        setupGO =false;
-     if (jsonBuff["KEY"].as<int>()==1){//if key from main is on
+  ///   if (jsonBuff["KEY"].as<int>()==1){//if key from main is on   ///json save logic
   passwordM = jsonBuff["PASS"].as<String>();
   ssidM = jsonBuff["SSID"].as<String>();
+    mainIP = jsonBuff["MIP"].as<String>();
   setupGO =false;
+  stage2go=true;
     Serial.println("wifi save");
    strcpy(ssid,ssidM.c_str());
    strcpy(password,passwordM.c_str());
   saveCredentials();
   connect = strlen(ssid) > 0; // Request WLAN connect with new credentials if there is a SSID
  //eeprom call to save info
-  }
+   
+ // }                                             ////////////// ///json save logic
   //notice only stops entering setup mode if "Key" ==1
 //  digitalWrite(LED_BUILTIN, HIGH);
   client.stop();
@@ -75,7 +79,7 @@ void loadEPInfo() {//creates a json package
   root["type"] = "relay" ;
   root["Name"] = "lamp"; 
   root["ESPAUTH"] = "42"; //auth variable
- 
+    Serial.println("endpoint info updated"); 
   serializeJson(root,endPointINFO);  //Store JSON in String variable
   }
 //===================================================================//
@@ -87,11 +91,15 @@ void setupMode(){
       timeOUT=false;//boolean so time is not set again
       timeStart=millis();//timestamp
       Serial.println("Time out timer begins");
+          Serial.println("epinfo:");
+              digitalWrite(9, 1);
+              Serial.println(endPointINFO);
     }
     
     if((timeStart+90000<millis()) ){//times out after 90sec
       setupGO = false;//comes out of setup 'if' in main loop
       timeOUT=true;//reset new timer  
+        digitalWrite(9, 0);
       Serial.println("Setup time out");
       return; //comes out if endpoint setup loop    
     }

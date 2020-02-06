@@ -3,20 +3,23 @@
 //#include "FirebaseESP8266.h"
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>//add json library
 //========================EP Setup========================================//
-const int interruptPin = 5;//GPIO5, pin labeled 'D1' ESP8266-12e NodeMCU
+const int interruptPin = 10;//GPIO10, pin labeled 'SD#' ESP8266-12e NodeMCU
 String endPointINFO="";
+String mainIP= "a";
 long timeStart; //time stamp for setup time out
 int inWifiKey =0;//if main is connected to wifi
 int wifiPort =8080;//set port
 bool setupGO = false;//setupmode flag
 bool timeOUT =true;//flag for timeout startpoint
-char ssidAP[] = "ESP_ap";          // SSID of your AP
+bool stage2go = false;
+char ssidAP[] = "ESP_main";          // SSID of your AP
 char pass[] = "12345678";         // password of your AP
 String ssidM = "";//router ssid
 String passwordM = "";//router pass
@@ -39,7 +42,7 @@ ICACHE_RAM_ATTR void setupISR() {
 //#define FIREBASE_AUTH "2"
 
 /* Set these to your desired softAP credentials. They are not configurable at runtime */
-//#define APSSID "ESP_ap2"
+//#define APSSID "ESP_main"
 //#define APPSK  "12345678"
 //More definition
 #define ColorNum 14               //total amount of colors
@@ -102,6 +105,9 @@ void setup() {
   pinMode(12, OUTPUT);
   pinMode(14, OUTPUT);
   digitalWrite(led, 0); //indication led
+  
+  pinMode(9, OUTPUT);//anti interrupt attempt
+  digitalWrite(9, 0); //starts low
   //
     //========================================================================//
 
@@ -125,12 +131,47 @@ void setup() {
 //   Serial.print("Started wifiserver on port: ");
 //   Serial.println(wifiPort);
   /* Setup the DNS server redirecting all the domains to the apIP */
+  WiFi.begin(ssidAP, pass);
 
+  Serial.print("Connecting");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+      digitalWrite(LED_BUILTIN, 0); //indication led
+    delay(500);
+    Serial.print(".");
+          digitalWrite(LED_BUILTIN, 1); //indication led
+  }
+  Serial.println();
+
+  Serial.print("Connected, IP address: ");
+  Serial.println(WiFi.localIP());
+
+      dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+ // if DNSServer is started with "*" for domain name, it will reply with
+  // provided IP to all DNS request
+  
+  /* Setup web pages: root, wifi config pages, SO captive portal detectors and not found. */
+  //server.on("/", handleRoot);
+//  epserver.on("/", handleWifi);
+//  epserver.on("/wifi", handleWifi);
+//  epserver.on("/wifisave", handleWifiSave);
+//  server.on("/generate_204", handleRoot);  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
+//  server.on("/fwlink", handleRoot);  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+//new
+  epserver.on("/getip", HTTP_GET, handleGetIP);
+  epserver.on("/receive", HTTP_POST, handleCommand);
+//
+//  epserver.onNotFound(handleNotFound);
+  
+  epserver.begin(); // Web server start
+  Serial.println("HTTP server started");
+  //loadCredentials(); // Load WLAN credentials from network
+  dnsServer.start(DNS_PORT, "*", WiFi.localIP());
 
 }
 
 void loop() {
-  if (connect) {
+  if (connect) {                                                       //addd stage 2 flag
     Serial.println("Connect requested");
     connect = false;
     connectWifi();
@@ -152,9 +193,9 @@ void loop() {
         Serial.println("");
         Serial.print("Connected to ");
         Serial.println(ssid);
-        Serial.print("IP address: ");
+        Serial.print("IP address on local connection: ");
         Serial.println(WiFi.localIP());
-        stage2();
+
         // Setup MDNS responder
         if (!MDNS.begin(myHostname)) {
           Serial.println("Error setting up MDNS responder!");
@@ -205,16 +246,19 @@ void loop() {
     if (s == WL_CONNECTED) {
       MDNS.update();
     }
-  }
-  if (setupGO){//if in settining up mode, may modify to a while loop
+  }//'if connect' end
+    if(stage2go)      stage2();
+  if (setupGO){//if in settiing up mode, may modify to a while loop
+  
       if(endPointINFO=="")//fills out wifi json info only once
       loadEPInfo();//goes to json void for wifi info
       setupMode();
     }//end setup mode if statement
   // Do work:
   //DNS
-  if(inWifiKey ==0)
-  return;
+
+//  if(inWifiKey ==0)
+//  return;
   dnsServer.processNextRequest();
   //HTTP
   epserver.handleClient();
