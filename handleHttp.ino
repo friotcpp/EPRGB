@@ -114,3 +114,14 @@ void handleGetIP() {
   else
     epserver.send(200, "text/plain", "Server is not connected to a WiFi! IP: " + WiFi.localIP().toString());
 }
+void handleUpdatePlace(){
+
+  tempEPPlace = epserver.arg("fp").toInt();
+  epserver.send(200, "text/plain", "updated family place");
+  saveFamPlace(tempEPPlace);
+  Serial.println("ep fam place: "+tempEPPlace);
+
+
+  
+
+}

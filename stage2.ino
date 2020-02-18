@@ -6,7 +6,7 @@
    String sender ="http://192.168."+ mainIP +"/epip";
     
     epIp.remove(0,8);
-    epIp = "epIP="+epIp;
+    epIp = "epIP="+epIp+"&fp="+fPlace;
    Serial.println("sending Post request to: \n"+ sender);
   
   HTTPClient http;  //Declare an object of class HTTPClient

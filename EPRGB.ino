@@ -16,7 +16,9 @@ String mainIP= "a";
 long timeStart; //time stamp for setup time out
 int inWifiKey =0;//if main is connected to wifi
 int wifiPort =8080;//set port
-int pairIndi = 9;
+int pairIndi = 9;//puts boths sides of indicator button to high so no more interrupts
+int tempEPPlace = 0;
+byte fPlace =0;
 bool setupGO = false;//setupmode flag
 bool timeOUT =true;//flag for timeout startpoint
 bool stage2go = false;
@@ -37,7 +39,14 @@ ICACHE_RAM_ATTR void setupISR() {
     
 }
 //=========================================================================//
-
+//External RGB controller
+#define cblue 2
+#define cred 0
+#define cgreen 4
+#define cwhite 5
+byte cCheck = B00000000;
+byte cCheckOld = B00000000;
+bool cUp = false;
 
 //===Firebase===//
 //#define FIREBASE_HOST "use different host"
@@ -51,6 +60,10 @@ ICACHE_RAM_ATTR void setupISR() {
 #define Device1 "led1"            //we can create device here
 #define Device2 "led3"
 #define AllDevice "All led"
+#define greenPin 14
+#define redPin 12
+#define bluePin 16
+#define whitePin 2
 
 const int led = 13;           //led pin
 String ColorNames[ColorNum] = { "off","on/white","blue","lightblue","red",
@@ -97,18 +110,18 @@ void setup() {
   //output setup
   pinMode(led, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(2, OUTPUT);
-  pinMode(0, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
+  pinMode(cblue, INPUT);
+  pinMode(cgreen, INPUT);
+  pinMode(cred, INPUT);
+  pinMode(cwhite, INPUT);
 
-  pinMode(15, OUTPUT);
-  pinMode(16, OUTPUT);
-  pinMode(12, OUTPUT);
-  pinMode(14, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+  pinMode(whitePin, OUTPUT);
   digitalWrite(led, 0); //indication led
   
-  pinMode(pairIndi, OUTPUT);//anti interrupt attempt
+  pinMode(pairIndi, OUTPUT);//interrupt blocker
   digitalWrite(pairIndi, 0); //starts low
   //
     //========================================================================//
@@ -133,6 +146,9 @@ void setup() {
 //   Serial.print("Started wifiserver on port: ");
 //   Serial.println(wifiPort);
   /* Setup the DNS server redirecting all the domains to the apIP */
+    loadCredentials(); // Load WLAN credentials from network
+
+    loadFamPlace();
   WiFi.begin(ssidAP, pass);
 
   Serial.print("Connecting");
@@ -162,17 +178,18 @@ void setup() {
 //new
   epserver.on("/getip", HTTP_GET, handleGetIP);
   epserver.on("/receive", HTTP_POST, handleCommand);
+    epserver.on("/place", HTTP_POST, handleUpdatePlace);
 //
 //  epserver.onNotFound(handleNotFound);
   
   epserver.begin(); // Web server start
   Serial.println("HTTP server started");
-  //loadCredentials(); // Load WLAN credentials from network
   dnsServer.start(DNS_PORT, "*", WiFi.localIP());
 
 }
 
 void loop() {
+
   if (connect) {                                                       //addd stage 2 flag
     Serial.println("Connect requested");
     connect = false;
@@ -249,7 +266,7 @@ void loop() {
       MDNS.update();
     }
   }//'if connect' end
-    if(stage2go)      stage2();
+    if(stage2go)     stage2();
   if (setupGO)
   {//if in setting up mode, may modify to a while loop
 
@@ -260,12 +277,40 @@ void loop() {
       
       setupMode();
    }//end setup mode if statement
-  // Do work:
-  //DNS
 
+
+//======================rgb controller functions============//
+  if (!cUp & bitRead(cCheck,7)!=digitalRead(cwhite))
+  cUp=true;
+  if (!cUp & bitRead(cCheck,6)!=digitalRead(cblue))
+  cUp=true;
+    if (!cUp & bitRead(cCheck,5)!=digitalRead(cred))
+  cUp=true;
+    if (!cUp & bitRead(cCheck,4)!=digitalRead(cgreen))
+  cUp=true;
+  if(cUp&!setupGO){
+    cUp =false;
+  bitWrite(cCheck,4,digitalRead(cgreen));
+  bitWrite(cCheck,5,digitalRead(cred));
+  bitWrite(cCheck,6,digitalRead(cblue));
+  bitWrite(cCheck,7,digitalRead(cwhite));
+  Serial.println("updated ccheck");
+        Serial.println("Sending controller command to main at http://esp8266.local");
+  HTTPClient http;  //Declare an object of class HTTPClient
+   http.begin("http://192.168."+mainIP+"/receive");      //Specify request destination
+   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+   int httpCode = http.POST("Command="+String(bitRead(cCheck,4))+String(bitRead(cCheck,5))+String(bitRead(cCheck,6))+String(bitRead(cCheck,7))+"&OutputDevice="+Device2);   //Send the request
+   String payload = http.getString();          //Get the response payload
+   Serial.println("Code from main");
+   Serial.println(httpCode);   //Print HTTP return code
+   Serial.println(payload);    //Print request response payload
+  }
+  //======================dns handling============//
 //  if(inWifiKey ==0)
 //  return;
   dnsServer.processNextRequest();
   //HTTP
   epserver.handleClient();
+  
 }
