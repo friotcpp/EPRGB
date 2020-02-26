@@ -33,14 +33,17 @@ void saveFamPlace(int fp) {
   EEPROM.put(0, fp);
   EEPROM.commit();
   EEPROM.end();
+  fPlace=fp;
 }
 void loadFamPlace() {
   EEPROM.begin(1);//changed to 511 from 512
   EEPROM.get(0, fPlace);
   EEPROM.end();
-
+  fPlace2=48+fPlace;
   Serial.println("FamPlace");
-  Serial.println(fPlace);
+  Serial.println(fPlace2);
+
+
 }
 
 

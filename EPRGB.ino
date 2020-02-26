@@ -3,11 +3,13 @@
 //#include "FirebaseESP8266.h"
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <WiFiUdp.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
+#include <mDNSResolver.h>
 #include <ArduinoJson.h>//add json library
 //========================EP Setup========================================//
 const int interruptPin = 10;//GPIO10, pin labeled 'SD#' ESP8266-12e NodeMCU
@@ -16,9 +18,11 @@ String mainIP= "a";
 long timeStart; //time stamp for setup time out
 int inWifiKey =0;//if main is connected to wifi
 int wifiPort =8080;//set port
-int pairIndi = 9;//puts boths sides of indicator button to high so no more interrupts
+int pairIndi =13;//puts boths sides of indicator button to high so no more interrupts
 int tempEPPlace = 0;
+int pairButtoncount;
 byte fPlace =0;
+char fPlace2='0';
 bool setupGO = false;//setupmode flag
 bool timeOUT =true;//flag for timeout startpoint
 bool stage2go = false;
@@ -32,18 +36,22 @@ WiFiClient client;
 
 
 
-ICACHE_RAM_ATTR void setupISR() {
-  noInterrupts();  
-  Serial.println("Interrupt service routine ");
-  setupGO = true;
-    
-}
+//ICACHE_RAM_ATTR void setupISR() {
+//  noInterrupts();  
+//  Serial.println("Interrupt service routine ");
+//  setupGO = true;
+//    
+//}
 //=========================================================================//
 //External RGB controller
-#define cblue 2
+#define cblue 15
 #define cred 0
 #define cgreen 4
 #define cwhite 5
+#define greenPin 14
+#define redPin 12
+#define bluePin 16
+#define whitePin 2
 byte cCheck = B00000000;
 byte cCheckOld = B00000000;
 bool cUp = false;
@@ -60,19 +68,18 @@ bool cUp = false;
 #define Device1 "led1"            //we can create device here
 #define Device2 "led3"
 #define AllDevice "All led"
-#define greenPin 14
-#define redPin 12
-#define bluePin 16
-#define whitePin 2
 
-const int led = 13;           //led pin
+
+//const int led = 13;           //led pin
 String ColorNames[ColorNum] = { "off","on/white","blue","lightblue","red",
                             "pink","magenta","lightmagenta","green",
                             "lightgreen","cyan","lightcyan","yellow","lightyellow"};
             
 //const char *softAP_ssid = APSSID;
 //const char *softAP_password = APPSK;
-
+WiFiUDP udp;
+using namespace mDNSResolver;
+Resolver resolver(udp);
 /* hostname for mDNS. Should work at least on windows. Try http://esp8266.local */
 const char *myHostname = "RGBEP";
 
@@ -106,33 +113,27 @@ unsigned int status = WL_IDLE_STATUS;
 
 //====setup===//
 void setup() {
-    delay(1500);
-  //output setup
-  pinMode(led, OUTPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
+    delay(2000);
+ Serial.begin(115200);//changed from example baud rate
+ // pinMode(led, OUTPUT);
+  //pinMode(LED_BUILTIN, OUTPUT);
   pinMode(cblue, INPUT);
   pinMode(cgreen, INPUT);
   pinMode(cred, INPUT);
   pinMode(cwhite, INPUT);
-
   pinMode(greenPin, OUTPUT);
   pinMode(redPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
   pinMode(whitePin, OUTPUT);
-  digitalWrite(led, 0); //indication led
-  
+ // digitalWrite(led, 0); //indication led
   pinMode(pairIndi, OUTPUT);//interrupt blocker
   digitalWrite(pairIndi, 0); //starts low
-  //
     //========================================================================//
-
  // pinMode(LED_BUILTIN, OUTPUT); //led turns on while client is connected
-  Serial.begin(115200);//changed from example baud rate
-  pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), setupISR, FALLING);
-  
+  pinMode(interruptPin, INPUT);
+ // attachInterrupt(digitalPinToInterrupt(interruptPin), setupISR, FALLING);
   Serial.println();
-  //ClearCredentials();
+// ClearCredentials();
 //  Serial.println("Configuring access point...");
 //  /* You can remove the password parameter if you want the AP to be open. */
 //  WiFi.softAPConfig(apIP, apIP, netMsk);
@@ -141,29 +142,33 @@ void setup() {
 //  delay(500); // Without delay I've seen the IP address blank
 //  Serial.print("AP IP address: ");
 //  Serial.println(WiFi.softAPIP());
-
 // wifiserver.begin();
 //   Serial.print("Started wifiserver on port: ");
 //   Serial.println(wifiPort);
   /* Setup the DNS server redirecting all the domains to the apIP */
     loadCredentials(); // Load WLAN credentials from network
-
     loadFamPlace();
-  WiFi.begin(ssidAP, pass);
-
-  Serial.print("Connecting");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-      digitalWrite(LED_BUILTIN, 0); //indication led
-    delay(500);
-    Serial.print(".");
-          digitalWrite(LED_BUILTIN, 1); //indication led
-  }
-  Serial.println();
+    WiFi.mode(WIFI_STA); 
+    connectWifi();
+//  WiFi.begin(ssidAP, pass);
+//
+//  Serial.print("Connecting");
+//  while (WiFi.status() != WL_CONNECTED)
+//  {
+//      digitalWrite(LED_BUILTIN, 0); //indication led
+//    delay(500);
+//    Serial.print(".");
+//          digitalWrite(LED_BUILTIN, 1); //indication led
+//  }
+//  Serial.println();
 
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
   setupGO = true;
+  bitWrite(cCheck,4,digitalRead(cgreen));
+  bitWrite(cCheck,5,digitalRead(cred));
+  bitWrite(cCheck,6,digitalRead(cblue));
+  bitWrite(cCheck,7,digitalRead(cwhite));
       dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
  // if DNSServer is started with "*" for domain name, it will reply with
   // provided IP to all DNS request
@@ -178,7 +183,7 @@ void setup() {
 //new
   epserver.on("/getip", HTTP_GET, handleGetIP);
   epserver.on("/receive", HTTP_POST, handleCommand);
-    epserver.on("/place", HTTP_POST, handleUpdatePlace);
+  epserver.on("/place", HTTP_POST, handleUpdatePlace);
 //
 //  epserver.onNotFound(handleNotFound);
   
@@ -189,6 +194,27 @@ void setup() {
 }
 
 void loop() {
+
+
+
+  while(digitalRead(interruptPin)==LOW){
+    delay(10);
+    pairButtoncount++;
+    }
+  if (pairButtoncount >50){ //button held
+    if (pairButtoncount > 400){
+      ClearCredentials();
+      if(pairButtoncount > 800) ESP.reset();
+  loadFamPlace();
+  loadCredentials();}
+    pairButtoncount = 0;
+    setupGO = true;
+  
+  
+  }
+
+
+
 
   if (connect) {                                                       //addd stage 2 flag
     Serial.println("Connect requested");
@@ -288,6 +314,7 @@ void loop() {
   cUp=true;
     if (!cUp & bitRead(cCheck,4)!=digitalRead(cgreen))
   cUp=true;
+     cUp =false;//////////////////////////////////////////////////
   if(cUp&!setupGO){
     cUp =false;
   bitWrite(cCheck,4,digitalRead(cgreen));
@@ -295,7 +322,7 @@ void loop() {
   bitWrite(cCheck,6,digitalRead(cblue));
   bitWrite(cCheck,7,digitalRead(cwhite));
   Serial.println("updated ccheck");
-        Serial.println("Sending controller command to main at http://esp8266.local");
+        Serial.println("Sending controller command to main ip");
   HTTPClient http;  //Declare an object of class HTTPClient
    http.begin("http://192.168."+mainIP+"/receive");      //Specify request destination
    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -306,6 +333,7 @@ void loop() {
    Serial.println(httpCode);   //Print HTTP return code
    Serial.println(payload);    //Print request response payload
   }
+  
   //======================dns handling============//
 //  if(inWifiKey ==0)
 //  return;

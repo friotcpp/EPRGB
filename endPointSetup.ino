@@ -8,32 +8,33 @@ void setupMode(){//set up mode
               digitalWrite(pairIndi, 1);//io turns on when in pairing mode
               Serial.println(endPointINFO);
               
-   if(mainAP != WiFi.SSID())//checks to connect to main ap if no response over router
-    {
-      Serial.println("Connecting to main device during pair:");
-      WiFi.disconnect(true);
-      delay(500);
-        Serial.println(WiFi.SSID());
-      WiFi.begin(ssidAP, pass);
-    while (WiFi.status() != WL_CONNECTED)
-      {
-    
+     if(mainAP != WiFi.SSID()& ask4setup ())//checks to connect to main ap if no response over router
+     {
+        Serial.println("Connecting to main device during pair:");
+        WiFi.disconnect(true);
         delay(500);
-        Serial.print(".");
-       if( timeStart+45000<millis()){
-                Serial.println("\nCould not connect to Main AP");
-        return;
-        
+          Serial.println(WiFi.SSID());
+        WiFi.begin(ssidAP, pass);
+      while (WiFi.status() != WL_CONNECTED)
+        {
+      
+          delay(500);
+          Serial.print(".");
+         if( timeStart+45000<millis()){
+                  Serial.println("\nCould not connect to Main AP");
+          return;
+          
+          }
+      
         }
-    
+   //   }//if !mainap
+//       if(WiFi.status() == WL_CONNECTED){
+//          Serial.println();
+//          Serial.print("Connected to Main, AP IP address: ");
+//          Serial.println(WiFi.localIP());}
+//            Serial.println(WiFi.SSID());
       }
-   if(WiFi.status() == WL_CONNECTED){
-      Serial.println();
-      Serial.print("Connected to Main, AP IP address: ");
-      Serial.println(WiFi.localIP());}
-        Serial.println(WiFi.SSID());
-        }
-    }
+  }
 
           
     if((timeStart+45000<millis()) )
@@ -152,7 +153,7 @@ loadFamPlace();//loads fam place
 
   root["type"] = "relay" ;
   root["Name"] = "rgb"; 
-  root["fp"] = fPlace;
+  root["fp"] = fPlace2-48;
   root["ESPAUTH"] = "42"; //auth variable
     Serial.println("endpoint info updated"); 
   serializeJson(root,endPointINFO);  //Store JSON in String variable

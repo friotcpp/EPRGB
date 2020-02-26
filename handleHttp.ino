@@ -117,11 +117,14 @@ void handleGetIP() {
 void handleUpdatePlace(){
 
   tempEPPlace = epserver.arg("fp").toInt();
-  epserver.send(200, "text/plain", "updated family place");
-  saveFamPlace(tempEPPlace);
-  Serial.println("ep fam place: "+tempEPPlace);
-
-
-  
+  Serial.println(tempEPPlace);
+   Serial.println(epserver.arg("fp"));
+  if(tempEPPlace<9&tempEPPlace>0)
+    {
+      epserver.send(200, "text/plain", "updated family place");
+      saveFamPlace(tempEPPlace);
+      Serial.println("ep fam place: "+tempEPPlace);
+    }
+  else   epserver.send(200, "text/plain", "invaild EP place");
 
 }
