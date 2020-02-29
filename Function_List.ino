@@ -6,6 +6,7 @@ void connectWifi() {
   int connRes = WiFi.waitForConnectResult();
   Serial.print("connRes: ");
   Serial.println(connRes);
+  Serial.println("connected to:"+WiFi.SSID());
 }
 
 //=================check color function========//
@@ -13,36 +14,34 @@ String checkColor(String device, String command)
 {
   String error_color = "error";
   int color_num = strtol( command.c_str(), NULL, 2 ); //convert string to int in base 2;
-  if (device == Device1)
+  if (device.charAt(3) == fPlace2)
   {
-    digitalWrite(2, int(command[0])-'0'); //change string to int with ascii correction
-    digitalWrite(0, int(command[1])-'0');
-    digitalWrite(4, int(command[2])-'0'); 
-    digitalWrite(5, int(command[3])-'0');
+    Serial.println("in first if");
+    digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
+    digitalWrite(redPin, int(command[1])-'0');
+    digitalWrite(bluePin, int(command[2])-'0'); 
+    digitalWrite(whitePin, int(command[3])-'0');
     //===Firebase update===//
-//    Firebase.setString(firebaseData,  "/Device1" , ColorNames[color_num]);
+//    Firebase.setString(firebaseData,  "/Device2" , ColorNames[color_num]);
     return ColorNames[color_num];
    }
-  else if (device == Device2)
-  {
-    digitalWrite(15, int(command[0]^1)-'0'); //change string to int with ascii correction
-    digitalWrite(16, int(command[1]^1)-'0');
-    digitalWrite(12, int(command[2]^1)-'0'); 
-    digitalWrite(14, int(command[3])-'0');
+  else if (device.charAt(3) == fPlace2)
+  {Serial.println("in else if");
+    digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
+    digitalWrite(redPin, int(command[1])-'0');
+    digitalWrite(bluePin, int(command[2])-'0'); 
+    digitalWrite(whitePin, int(command[3])-'0');
     //===Firebase update===//
 //    Firebase.setString(firebaseData,  "/Device2" , ColorNames[color_num]);
     return ColorNames[color_num];
   }
   else if (device == AllDevice)
   {
-    digitalWrite(2, int(command[0])-'0'); //change string to int with ascii correction
-    digitalWrite(0, int(command[1])-'0');
-    digitalWrite(4, int(command[2])-'0'); 
-    digitalWrite(5, int(command[3])-'0');
-    digitalWrite(15, int(command[0]^1)-'0'); //change string to int with ascii correction
-    digitalWrite(16, int(command[1]^1)-'0');
-    digitalWrite(12, int(command[2]^1)-'0'); 
-    digitalWrite(14, int(command[3])-'0');
+    
+    digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
+    digitalWrite(redPin, int(command[1])-'0');
+    digitalWrite(bluePin, int(command[2])-'0'); 
+    digitalWrite(whitePin, int(command[3])-'0');
 //    //===Firebase update===//
 //    Firebase.setString(firebaseData,  "/Device1" , ColorNames[color_num]);
 //    Firebase.setString(firebaseData,  "/Device2" , ColorNames[color_num]);
@@ -53,14 +52,15 @@ String checkColor(String device, String command)
 
 //==========color command response
 void handleCommand() {
-  digitalWrite(led, 1);
+//  digitalWrite(led, 1);
   String device = epserver.arg("OutputDevice");
   String command = epserver.arg("Command");
   String color = checkColor(device,command);
   epserver.send(200, "text/plain", "Successfully Received Code: [" + command + "]\nColor: [" + color + "]");
+
   Serial.println("Handling Command: {" + command + "} For: {" + device + "}...");
   Serial.println("The Led is now: " + color + "!");
-  digitalWrite(led, 0);
+//digitalWrite(led, 0);
 }
 
 ////====Firebase Print debug tool
