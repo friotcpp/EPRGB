@@ -14,18 +14,19 @@ String checkColor(String device, String command)
 {
   String error_color = "error";
   int color_num = strtol( command.c_str(), NULL, 2 ); //convert string to int in base 2;
-  if (device == Device1)
+  if (device.charAt(3) == fPlace2)
   {
-//    digitalWrite(2, int(command[0])-'0'); //change string to int with ascii correction
-//    digitalWrite(0, int(command[1])-'0');
-//    digitalWrite(4, int(command[2])-'0'); 
-//    digitalWrite(5, int(command[3])-'0');
+    Serial.println("in first if");
+    digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
+    digitalWrite(redPin, int(command[1])-'0');
+    digitalWrite(bluePin, int(command[2])-'0'); 
+    digitalWrite(whitePin, int(command[3])-'0');
     //===Firebase update===//
-//    Firebase.setString(firebaseData,  "/Device1" , ColorNames[color_num]);
+//    Firebase.setString(firebaseData,  "/Device2" , ColorNames[color_num]);
     return ColorNames[color_num];
    }
-  else if (device == Device2)
-  {
+  else if (device.charAt(3) == fPlace2)
+  {Serial.println("in else if");
     digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
     digitalWrite(redPin, int(command[1])-'0');
     digitalWrite(bluePin, int(command[2])-'0'); 
@@ -36,6 +37,7 @@ String checkColor(String device, String command)
   }
   else if (device == AllDevice)
   {
+    
     digitalWrite(greenPin, int(command[0])-'0'); //change string to int with ascii correction
     digitalWrite(redPin, int(command[1])-'0');
     digitalWrite(bluePin, int(command[2])-'0'); 

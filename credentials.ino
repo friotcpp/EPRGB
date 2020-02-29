@@ -34,6 +34,7 @@ void saveFamPlace(int fp) {
   EEPROM.commit();
   EEPROM.end();
   fPlace=fp;
+  fPlace2=48+fPlace;
 }
 void loadFamPlace() {
   EEPROM.begin(1);//changed to 511 from 512

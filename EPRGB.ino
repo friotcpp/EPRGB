@@ -12,7 +12,7 @@
 #include <mDNSResolver.h>
 #include <ArduinoJson.h>//add json library
 //========================EP Setup========================================//
-const int interruptPin = 10;//GPIO10, pin labeled 'SD#' ESP8266-12e NodeMCU
+const int pairingPin = 10;//GPIO10, pin labeled 'SD#' ESP8266-12e NodeMCU
 String endPointINFO="";
 String mainIP= "a";
 long timeStart; //time stamp for setup time out
@@ -24,6 +24,7 @@ int pairButtoncount;
 byte fPlace =0;
 char fPlace2='0';
 bool setupGO = false;//setupmode flag
+bool indicatorLed = false;
 bool timeOUT =true;//flag for timeout startpoint
 bool stage2go = false;
 char ssidAP[] = "ESP_main";          // SSID of your AP
@@ -52,6 +53,7 @@ WiFiClient client;
 #define redPin 12
 #define bluePin 16
 #define whitePin 2
+#define pinIndLed 9
 byte cCheck = B00000000;
 byte cCheckOld = B00000000;
 bool cUp = false;
@@ -125,12 +127,14 @@ void setup() {
   pinMode(redPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
   pinMode(whitePin, OUTPUT);
+  pinMode(pinIndLed,OUTPUT);
  // digitalWrite(led, 0); //indication led
   pinMode(pairIndi, OUTPUT);//interrupt blocker
   digitalWrite(pairIndi, 0); //starts low
+  digitalWrite(pinIndLed, indicatorLed);
     //========================================================================//
  // pinMode(LED_BUILTIN, OUTPUT); //led turns on while client is connected
-  pinMode(interruptPin, INPUT);
+  pinMode(pairingPin, INPUT);
  // attachInterrupt(digitalPinToInterrupt(interruptPin), setupISR, FALLING);
   Serial.println();
 // ClearCredentials();
@@ -197,11 +201,24 @@ void loop() {
 
 
 
-  while(digitalRead(interruptPin)==LOW){
+  while(digitalRead(pairingPin)==LOW){
     delay(10);
     pairButtoncount++;
+     if(pairButtoncount%50==0){
+      indicatorLed = !indicatorLed;
+      Serial.println(indicatorLed);
+      digitalWrite(pinIndLed, indicatorLed);
+      }
+    if( pairButtoncount%100==0){
+     
+      Serial.println(pairButtoncount/100);
+   
+      }
     }
   if (pairButtoncount >50){ //button held
+    indicatorLed = false;
+    digitalWrite(pinIndLed, indicatorLed);//makes sure indicator stays after done pressing button
+    digitalWrite(pinIndLed, 0);
     if (pairButtoncount > 400){
       ClearCredentials();
       if(pairButtoncount > 800) ESP.reset();
